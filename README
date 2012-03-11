@@ -1,0 +1,3 @@
+Sample code of how to check for updates from inside your iOS app using the App Store Search API.
+
+This is just a proof of concept, there's room for lots of improvements, maybe wrap it all in a class and expose the retrieved information from the store so the developer can show his own customized dialog and choose what information to display (like the "What's new ..." section for example).
