@@ -9,9 +9,51 @@
 
 - (void) checkForUpdate:(NSString*)appId
 {
-	NSString* url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?id=%@", appId];
-	NSData* data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
-	NSDictionary* responseDictionary = [[CJSONDeserializer deserializer] deserializeAsDictionary:data error:nil];		
+    NSString* url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?id=%@", appId];
+    
+    NSURLRequest* request=[NSURLRequest requestWithURL:[NSURL URLWithString:url]
+                                              cachePolicy:NSURLRequestUseProtocolCachePolicy
+                                          timeoutInterval:20.0];
+    
+    
+	
+	NSURLConnection* connection=[[NSURLConnection alloc] initWithRequest:request delegate:self];
+    
+    if (connection)
+    {
+        _receivedData = [[NSMutableData data] retain];
+    }
+    else
+    {
+        return;
+    }
+	
+}
+
+#pragma mark - NSURLConnectionDelegate methods
+- (void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)response
+{
+    [_receivedData setLength:0];
+}
+
+- (void)connection:(NSURLConnection*)connection didReceiveData:(NSData*)data
+{
+    [_receivedData appendData:data];
+}
+
+- (void)connection:(NSURLConnection*)connection didFailWithError:(NSError*)error
+{
+    [connection release];
+    [_receivedData release];
+    
+    NSLog(@"Connection failed! Error - %@ %@",
+          [error localizedDescription],
+          [[error userInfo] objectForKey:NSURLErrorFailingURLStringErrorKey]);
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection*)connection
+{
+    NSDictionary* responseDictionary = [[CJSONDeserializer deserializer] deserializeAsDictionary:_receivedData error:nil];		
 	NSArray* resultsArray = [responseDictionary objectForKey:@"results"];
 	
 	// Since we are requesting info for only one app, the results array should contain only one item: the info for that app.
@@ -37,9 +79,11 @@
 		[alert show];
 		[alert release];
 	}
-	
+    [connection release];
+    [_receivedData release];
 }
 
+#pragma mark -
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex
 {
 	if (buttonIndex != alertView.cancelButtonIndex)
